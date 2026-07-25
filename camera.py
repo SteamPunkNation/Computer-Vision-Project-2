@@ -1,5 +1,6 @@
 import cv2
 import time
+import platform
 
 class Camera:
     def __init__(self, source=0, width=640, height=480, fps=30):
@@ -8,7 +9,10 @@ class Camera:
         # On Windows, cv2.CAP_DSHOW (DirectShow) is often much more stable than the default MSMF backend, 
         # especially for high-end webcams like the Logitech Brio which can freeze on initialization.
         if isinstance(source, int):
-            self.cap = cv2.VideoCapture(source, cv2.CAP_DSHOW)
+            if platform.system() == 'Windows':
+                self.cap = cv2.VideoCapture(source, cv2.CAP_DSHOW)
+            else:
+                self.cap = cv2.VideoCapture(source)
         else:
             self.cap = cv2.VideoCapture(source)
         

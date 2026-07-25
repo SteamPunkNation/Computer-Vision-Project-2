@@ -12,7 +12,7 @@ from visualization import Visualizer
 import csv
 import datetime
 
-def main(source=0, use_masking=True):
+def main(source=0, use_masking=True, camera_height=1.2, window_size=5):
     # Initialize components
     cam = Camera(source=source)
     
@@ -26,7 +26,7 @@ def main(source=0, use_masking=True):
     segmenter = SemanticSegmenter() if use_masking else None
     
     tracker = FeatureTracker()
-    vo = VisualOdometry()
+    vo = VisualOdometry(camera_height=camera_height, window_size=window_size)
     vis = Visualizer()
     
     print("Starting Semantic-Aware Visual Odometry Pipeline...")
@@ -158,6 +158,29 @@ def main(source=0, use_masking=True):
 
 def list_available_cameras():
     print("Scanning for available video sources...")
+    import platform
+    import subprocess
+    
+    if platform.system() == "Darwin":
+        try:
+            result = subprocess.run(['system_profiler', 'SPCameraDataType'], capture_output=True, text=True)
+            output = result.stdout
+            cameras = []
+            for line in output.split('\n'):
+                line = line.strip()
+                if line and not line.startswith('Camera:') and not line.startswith('Model ID:') and not line.startswith('Unique ID:'):
+                    if line.endswith(':'):
+                        cameras.append(line[:-1])
+            if cameras:
+                print("\nAvailable cameras:")
+                for idx, name in enumerate(cameras):
+                    print(f"  [{idx}] {name}")
+                print("")
+                return list(range(len(cameras)))
+        except Exception:
+            pass
+
+    # Windows (pygrabber) or generic fallback
     try:
         from pygrabber.dshow_graph import FilterGraph
         graph = FilterGraph()
@@ -173,14 +196,17 @@ def list_available_cameras():
         print("")
         return list(range(len(devices)))
     except ImportError:
-        print("Install 'pygrabber' (pip install pygrabber) to see actual camera names.")
+        print("Install 'pygrabber' (pip install pygrabber) to see actual camera names on Windows.")
         print("Falling back to scanning indices... (this may take a few seconds)")
         
         available_cameras = []
-        for i in range(10):
-            import os
-            os.environ["OPENCV_LOG_LEVEL"] = "FATAL"
+        # Attempt to silence OpenCV warnings during probe
+        try:
+            cv2.utils.logging.setLogLevel(cv2.utils.logging.LOG_LEVEL_SILENT)
+        except AttributeError:
+            pass
             
+        for i in range(10):
             cap = cv2.VideoCapture(i)
             if cap is not None and cap.isOpened():
                 ret, _ = cap.read()
@@ -198,6 +224,8 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="Semantic-Aware Monocular Visual Odometry")
     parser.add_argument('--source', type=str, default='0', help='Video source (0 for webcam or path to video file)')
     parser.add_argument('--no-mask', action='store_true', help='Disable semantic masking for comparison')
+    parser.add_argument('--camera-height', type=float, default=1.2, help='Assumed camera height in meters for scale estimation')
+    parser.add_argument('--window-size', type=int, default=5, help='Window size for local bundle adjustment')
     
     args = parser.parse_args()
     
@@ -214,4 +242,4 @@ if __name__ == '__main__':
     # Parse source as int if it's a digit (webcam index)
     src = int(user_input) if user_input.isdigit() else user_input
     
-    main(source=src, use_masking=not args.no_mask)
+    main(source=src, use_masking=not args.no_mask, camera_height=args.camera_height, window_size=args.window_size)
