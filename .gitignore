@@ -10,7 +10,8 @@ venv/
 env/
 
 # Logs and generated files
-metrics_log_*.csv
+generated/
+logs/
 *.log
 
 # IDEs

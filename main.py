@@ -3,11 +3,11 @@ import time
 import argparse
 import numpy as np
 
-from camera import Camera
-from segmentation import SemanticSegmenter
-from feature_tracker import FeatureTracker
-from visual_odometry import VisualOdometry
-from visualization import Visualizer
+from modules.camera import Camera
+from modules.segmentation import SemanticSegmenter
+from modules.feature_tracker import FeatureTracker
+from modules.visual_odometry import VisualOdometry
+from modules.visualization import Visualizer
 
 import csv
 import datetime
@@ -17,7 +17,9 @@ def main(source=0, use_masking=True, camera_height=1.2, window_size=5):
     cam = Camera(source=source)
     
     # Initialize logger
-    log_filename = f"metrics_log_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"
+    import os
+    os.makedirs('generated/logs', exist_ok=True)
+    log_filename = f"generated/logs/metrics_log_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"
     log_file = open(log_filename, 'w', newline='')
     csv_writer = csv.writer(log_file)
     csv_writer.writerow(['Timestamp', 'FPS', 'Delay_ms', 'TrackedFeatures', 'Pose_X', 'Pose_Z', 'Motion', 'Rotation'])
